@@ -1,36 +1,47 @@
 "use client";
 
-import {
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarInset,
-} from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/sidebar";
+import { AppSidebar, MobileSidebarDrawer } from "@/components/sidebar";
+import { useState } from "react";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   return (
-    <SidebarProvider>
-      {/* Full viewport container */}
-      <div className="flex h-screen w-screen overflow-hidden">
-        {/* Sidebar (independent scroll) */}
+    <div className="flex">
+      {/* Mobile sidebar */}
+      <div className="hidden md:flex h-screen w-64 flex-col">
         <AppSidebar />
-
-        {/* Main area */}
-        <SidebarInset className="flex flex-col">
-          {/* Header */}
-          <header className="flex h-14 items-center gap-2 border-b px-4">
-            <SidebarTrigger />
-            <span className="font-semibold">Mazeltov Dashboard</span>
-          </header>
-
-          {/* Main scrollable content */}
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
-        </SidebarInset>
       </div>
-    </SidebarProvider>
+      {/* Mobile drawer */}
+      <MobileSidebarDrawer
+        open={isSidebarOpen}
+        onOpenChange={setIsSidebarOpen}
+      />
+
+      <main className="flex-1 bg-slate-100 ">
+        <header className="bg-slate-50 h-16 flex items-center justify-between">
+          <div>
+            <Button
+              variant={"ghost"}
+              size={"icon-lg"}
+              className="font-bold transition-all duration-300"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              <Menu />
+            </Button>
+          </div>
+        </header>
+        <div className="overflow-y-auto p-6">{children}</div>
+      </main>
+    </div>
   );
 }
+
+
+
