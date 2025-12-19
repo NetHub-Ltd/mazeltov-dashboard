@@ -2,29 +2,38 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
 export const { signIn, signOut, handlers, auth } = NextAuth({
+  debug: true,
   providers: [Google],
 
   callbacks: {
-    signIn: async ({ user }) => {
-      if (!user?.email) return false;
+    // signIn: async ({ user }) => {
+    //   // if (!user?.email) return false;
 
-      try {
-        const res = await fetch(`${process.env.API_BASE_URL}/auth/google`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email }),
-        });
+    //   console.log("user:". user)
 
-        const { access_token } = await res.json()
+    //   // console.log("queried user: ", user.email);
 
-        if (!access_token) return false;
-        
-        console.log("User signed in: ", user.email);
-        return res.ok;
-      } catch {
-        return false;
-      }
-    },
+    //   try {
+    //     const res = await fetch(`${process.env.API_BASE_URL}/auth/google`, {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({ email: user.email }),
+    //     });
+
+    //     const data = await res.json();
+
+    //     console.log("server response: ", data);
+
+    //     const { access_token } = data;
+
+    //     // if (!access_token) return false;
+
+    //     console.log("User signed in: ", user.email);
+    //     return true;
+    //   } catch {
+    //     return false;
+    //   }
+    // },
 
     jwt: async ({ token, user, account }) => {
       if (account && user?.email) {
