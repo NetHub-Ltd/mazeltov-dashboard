@@ -1,70 +1,3 @@
-// "use client";
-
-// import Image from "next/image";
-// import Link from "next/link";
-// import { SignInButton } from "@/components/signInButton";
-// import { useAuthenticatedUser } from "@/lib/hooks/useUser";
-
-// const HomePage = () => {
-//   const { user, isLoading, isAuthenticated } = useAuthenticatedUser();
-
-//   if (isLoading) {
-//     return (
-//       <div className="flex h-screen items-center justify-center">
-//         <p className="text-sm text-gray-500">Checking authentication…</p>
-//       </div>
-//     );
-//   }
-//   return (
-//     <div className="bg-gray-50 flex justify-center flex-col mx-auto items-center h-screen">
-//       <div className="max-w-md w-full bg-white rounded-xl shadow-sm p-6 text-center space-y-4">
-//         {isAuthenticated && user ? (
-//           <>
-//             {/* Avatar */}
-//             {user.image && (
-//               <div className="flex justify-center">
-//                 <Image
-//                   src={user.image}
-//                   alt={user.name ?? "User avatar"}
-//                   width={96}
-//                   height={96}
-//                   className="rounded-full"
-//                 />
-//               </div>
-//             )}
-
-//             {/* User info */}
-//             <div>
-//               <h1 className="text-xl font-semibold">
-//                 Welcome{user.name ? `, ${user.name}` : ""}
-//               </h1>
-//               <p className="text-sm text-gray-600">{user.email}</p>
-//             </div>
-
-//             {/* CTA */}
-//             <Link
-//               href="/dashboard"
-//               className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
-//             >
-//               Go to dashboard
-//             </Link>
-//           </>
-//         ) : (
-//           <>
-//             <h1 className="text-xl font-semibold">Welcome to Mazeltov</h1>
-//             <p className="text-sm text-gray-600">
-//               Sign in to access your dashboard
-//             </p>
-//             <SignInButton />
-//           </>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default HomePage;
-
 "use client";
 
 import Image from "next/image";
@@ -78,45 +11,53 @@ export default function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center text-sm text-gray-500">
+      /* Uses our muted foreground and themed background */
+      <div className="h-screen flex items-center justify-center text-sm text-muted-foreground bg-background">
         Checking authentication…
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-sm space-y-4">
+    /* Removed bg-gray-50, using themed background variable */
+    <div className="h-screen flex items-center justify-center bg-background p-4">
+      {/* - Used bg-card for the container
+          - Used border-border for subtle separation
+          - Used shadow-sm which adapts to dark mode better 
+      */}
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm space-y-6">
         {isAuthenticated ? (
           <>
             {user?.image && (
-              <Image
-                src={user.image}
-                alt={user.name ?? "User avatar"}
-                width={96}
-                height={96}
-                className="mx-auto rounded-full"
-              />
+              <div className="relative mx-auto w-24 h-24">
+                <Image
+                  src={user.image}
+                  alt={user.name ?? "User avatar"}
+                  fill
+                  className="rounded-full border-2 border-border object-cover"
+                />
+              </div>
             )}
 
-            <div>
-              <h1 className="text-xl font-semibold">
+            <div className="space-y-1">
+              {/* Uses fluid text-xl from theme */}
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
                 Welcome{user?.name && `, ${user.name}`}
               </h1>
-              <p className="text-sm text-gray-600">{user?.email}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <Link
                 href="/dashboard"
-                className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
               >
                 Go to dashboard
               </Link>
 
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50 transition"
+                className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 Sign out
               </button>
@@ -124,11 +65,17 @@ export default function HomePage() {
           </>
         ) : (
           <>
-            <h1 className="text-xl font-semibold">Welcome to Mazeltov</h1>
-            <p className="text-sm text-gray-600">
-              Sign in to access your dashboard
-            </p>
-            <SignInButton />
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                Welcome to Mazeltov
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Sign in to access your dashboard
+              </p>
+            </div>
+            <div className="pt-2">
+              <SignInButton />
+            </div>
           </>
         )}
       </div>
