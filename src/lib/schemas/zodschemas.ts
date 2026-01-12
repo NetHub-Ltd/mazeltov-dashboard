@@ -17,8 +17,22 @@ export const AnalyticsSchema = z.object({
       validity: z.string(),
       category: z.string(),
       description: z.string(),
-      tag: z.string(),
+      tag: z.string().nullable(), // this can be nullable
     })
   ),
 });
 
+export type SalesType = z.infer<typeof SalesSchema>;
+export type AnalyticsType = z.infer<typeof AnalyticsSchema>;
+
+export const ProductSchema = z.object({
+  id: z.number().optional(),
+  label: z.string().min(1, "Label is required"),
+  price: z.number().min(0),
+  validity: z.string().min(1),
+  category: z.enum(["data", "minutes", "sms", "minutesPlusData"]),
+  description: z.string().min(1),
+  tag: z.string().nullable().optional(),
+});
+
+export type Product = z.infer<typeof ProductSchema>;

@@ -14,24 +14,25 @@ export default function DashboardLayout({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    /* CHANGE: Fixed height (h-screen) and hidden overflow on the parent 
+       prevents the browser's main scrollbar from appearing.
+    */
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* DESKTOP SIDEBAR: 
-         Pinned to the left. Using 'sidebar' tokens from your theme. 
+          Added h-full and flex-col. Internal AppSidebar should handle 
+          its own overflow-y-auto.
       */}
-      <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border bg-sidebar shrink-0">
+      <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border bg-sidebar shrink-0 h-full">
         <AppSidebar />
       </aside>
 
-      {/* MOBILE DRAWER: 
-         Only triggers when the menu button is clicked on small screens.
-      */}
       <MobileSidebarDrawer open={isMobileOpen} onOpenChange={setIsMobileOpen} />
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex flex-1 flex-col min-w-0">
-        <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 sticky top-0 z-10">
+      {/* MAIN CONTENT AREA: h-full and min-w-0 for flex stability */}
+      <div className="flex flex-1 flex-col min-w-0 h-full">
+        {/* HEADER: Added shrink-0 so it doesn't compress when content is tall */}
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 z-10">
           <div className="flex items-center gap-4">
-            {/* Menu Trigger - Only visible on mobile */}
             <Button
               variant="ghost"
               size="icon"
@@ -42,7 +43,6 @@ export default function DashboardLayout({
               <span className="sr-only">Toggle Menu</span>
             </Button>
 
-            {/* Optional Breadcrumb or Page Title */}
             <h2 className="text-sm font-medium hidden sm:block">
               Dashboard Overview
             </h2>
@@ -50,15 +50,14 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            {/* User Profile placeholder */}
             <div className="h-8 w-8 rounded-full bg-muted" />
           </div>
         </header>
 
-        {/* SCROLLABLE BODY:
-           Uses 'overflow-y-auto' so the header stays sticky.
+        {/* MAIN SCROLL BODY: 
+            This is now the ONLY part of the main area that scrolls.
         */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-background">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>

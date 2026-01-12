@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AnalyticsSchema, SalesSchema } from "@/lib/schemas/zodschemas";
 
-const dummyToken =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzY4MjI1NTI2LCJzY29wZXMiOm51bGx9._K2gflsYm6ww1xLuazJpoZoURAsILO0hN92VS7uI3Is";
+const dummyToken = process.env.DummtyToken;
 
 // Move schemas outside the handler to prevent re-initialization on every request
 
