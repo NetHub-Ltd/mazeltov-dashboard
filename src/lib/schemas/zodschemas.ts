@@ -36,3 +36,27 @@ export const ProductSchema = z.object({
 });
 
 export type Product = z.infer<typeof ProductSchema>;
+
+
+/**
+ * Zod Schema for Bingwa Transaction Validation
+ * Represents the "Hard" response from the backend API
+ */
+export const TransactionSchema = z.object({
+  id: z.string().min(1),
+  // Handles null when transaction hasn't been processed or failed early
+  mpesa_receipt_number: z.string().nullable(),
+  paying_number: z.string(),
+  receiving_number: z.string(),
+  amount: z.number().positive(),
+  // Strict status typing for better UI logic
+  status: z.enum(["pending", "success", "failed", "cancelled"]),
+  // Automatically transforms the string into a Date object
+  transaction_date: z.string().datetime({ precision: 6 }).or(z.string()),
+});
+
+// Schema for an array of these objects
+export const TransactionsArraySchema = z.array(TransactionSchema);
+
+// Infer TypeScript types from the schema
+export type Transaction = z.infer<typeof TransactionSchema>;

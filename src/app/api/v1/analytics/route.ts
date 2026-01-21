@@ -1,13 +1,22 @@
 import { auth } from "@/app/auth";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { AnalyticsSchema, SalesSchema } from "@/lib/schemas/zodschemas";
 
-const dummyToken = process.env.DummtyToken;
 
 // Move schemas outside the handler to prevent re-initialization on every request
 
 export async function GET() {
+
+  // get a real token from auth service in production
+  const session = await auth();
+  const token = session?.accessToken
+
+  if (!token) {
+    console.error("No token found in session");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  
   try {
     const user = await auth();
     if (!user?.accessToken)
@@ -15,7 +24,7 @@ export async function GET() {
 
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${dummyToken}`, // replace with dynamic token from auth
+      Authorization: `Bearer ${token}`, // replace with dynamic token from auth
     };
 
     const [salesRes, analyticsRes] = await Promise.allSettled([
