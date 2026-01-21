@@ -1,70 +1,88 @@
 // import { NextRequest, NextResponse } from "next/server";
 // import { getToken } from "next-auth/jwt";
 
-// const authUrl = "/";
+// const AUTH_URL = "/";
 
-// export async function proxy(req: NextRequest) {
-//   console.log("Proxy middleware called for:", req.url);
+// export default async function proxy(req: NextRequest) {
+//   const { pathname } = req.nextUrl;
+
+//   // 1. Local JWT Extraction
 //   const token = await getToken({
 //     req,
-//     secret: process.env.AUTH_SECRET, // make sure this matches your env
+//     secret: process.env.AUTH_SECRET,
 //   });
 
 //   const accessToken = token?.accessToken as string;
 
-//   // No access token → redirect
 //   if (!accessToken) {
-//     console.error("No access token found");
-//     return NextResponse.redirect(new URL(authUrl, req.url));
+//     return redirectToAuth(req);
 //   }
 
 //   try {
+//     const controller = new AbortController();
+//     const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+//     // 2. Hard Validation
 //     const res = await fetch(`${process.env.API_BASE_URL}/auth/me`, {
 //       headers: {
 //         Authorization: `Bearer ${accessToken}`,
+//         "Content-Type": "application/json",
 //       },
+//       signal: controller.signal,
 //     });
 
+//     clearTimeout(timeoutId);
+
 //     if (!res.ok) {
-//       return NextResponse.redirect(new URL(authUrl, req.url));
+//       return redirectToAuth(req);
 //     }
 
-//     const data = await res.json();
+//     const userData = await res.json();
 
-//     if (!data.email) {
-//       console.error("No user found");
-//       return NextResponse.redirect(new URL(authUrl, req.url));
+//     if (!userData?.email) {
+//       return redirectToAuth(req);
 //     }
 
-//     // Token valid → allow request
-//     console.log("User authenticated:", data.email);
-//     return NextResponse.next();
-//   } catch {
-//     // Backend unreachable → fail closed
-//     return NextResponse.redirect(new URL(authUrl, req.url));
+//     // 3. Downstream Identity Injection
+
+//     const requestHeaders = new Headers(req.headers);
+
+//     // Inject the validated token so downstream components don't have to re-extract it
+//     requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+//     requestHeaders.set("x-proxy-validated", "true");
+
+//     return NextResponse.next({
+//       request: {
+//         headers: requestHeaders,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("[Proxy] Auth check failed:", error);
+//     return redirectToAuth(req);
 //   }
 // }
 
-// /**
-//  * Route matcher (kept in same file)
-//  */
+// function redirectToAuth(req: NextRequest) {
+//   const url = new URL(AUTH_URL, req.url);
+//   url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+//   return NextResponse.redirect(url);
+// }
+
 // export const config = {
-//   matcher: ["/dashboard/:path*"],
+//   matcher: ["/dashboard/:path*", "/api/bingwa/:path*"],
 // };
 
+
+
+// proxy.ts (Middleware)
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const AUTH_URL = "/";
 
-/**
- * High-performance Proxy Middleware
- * Performs JWT validation + Remote "Hard" Session Check
- */
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Extract JWT from request
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
@@ -72,58 +90,69 @@ export default async function proxy(req: NextRequest) {
 
   const accessToken = token?.accessToken as string;
 
-  // 2. Immediate local check (Saves a network call if JWT is missing/expired)
   if (!accessToken) {
-    console.warn(`[Proxy] No token for: ${pathname}`);
     return redirectToAuth(req);
   }
 
   try {
-    // 3. Perform the "Hard" Validation (Network-on-Network)
-    // We use a AbortController to set a timeout so the proxy doesn't hang
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
     const res = await fetch(`${process.env.API_BASE_URL}/auth/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
+    // If backend rejects token or check fails
     if (!res.ok) {
-      console.error(`[Proxy] Token invalid on backend: ${res.status}`);
-      return redirectToAuth(req);
+      return redirectToAuth(req, true); // Pass true to clear cookie
     }
 
     const userData = await res.json();
+    console.log("User data from proxy auth check:", userData);
 
     if (!userData?.email) {
-      return redirectToAuth(req);
+      return redirectToAuth(req, true);
     }
 
-    // 4. Token is valid -> Inject user identity into headers for downstream use
-    const response = NextResponse.next();
-    response.headers.set("x-user-email", userData.email);
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+    requestHeaders.set("x-proxy-validated", "true");
 
-    return response;
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   } catch (error) {
-    // Fail closed if the backend is down or timeout reached
-    console.error("[Proxy] Auth check failed or timed out:", error);
-    return redirectToAuth(req);
+    console.error("[Proxy] Auth check failed:", error);
+    return redirectToAuth(req, true);
   }
 }
 
 /**
- * Helper to handle clean redirects with callback tracking
+ * Redirects and optionally clears the auth session cookie 
+ * to stay in sync with the client-side hook.
  */
-function redirectToAuth(req: NextRequest) {
+function redirectToAuth(req: NextRequest, shouldClearSession = false) {
   const url = new URL(AUTH_URL, req.url);
-  // Store where the user was trying to go
-  url.searchParams.set("callbackUrl", encodeURI(req.nextUrl.pathname));
-  return NextResponse.redirect(url);
+  url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+  
+  const response = NextResponse.redirect(url);
+
+  if (shouldClearSession) {
+    // Manually expire the NextAuth session cookies
+    // Note: Adjust 'next-auth.session-token' if using __Secure- prefix in prod
+    response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
+    response.cookies.set("__Secure-next-auth.session-token", "", { maxAge: 0 });
+  }
+
+  return response;
 }
 
 export const config = {
