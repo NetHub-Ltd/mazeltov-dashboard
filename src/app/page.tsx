@@ -45,9 +45,6 @@ export default function HomePage() {
                 Sign out
               </button>
             </div>
-            <p>
-              <pre>{JSON.stringify(session, null, 2)}</pre>
-            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-6 text-center">
