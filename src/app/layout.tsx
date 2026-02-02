@@ -56,6 +56,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "Mazeltov Dashboard", template: "%s - Mazeltov Dashboard" },
   description: "Advanced analytics and management dashboard",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
