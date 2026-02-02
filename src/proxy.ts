@@ -151,58 +151,136 @@
 //   ],
 // };
 
+// import { NextRequest, NextResponse } from "next/server";
+// import { getToken } from "next-auth/jwt";
+
+// export default async function proxy(req: NextRequest) {
+//   const pathname = req.nextUrl.pathname;
+//   const isProd = process.env.NODE_ENV === "production";
+
+//   // LOG 1: Heartbeat
+//   console.log(`[Proxy-Diagnostic] Path: ${pathname}`);
+
+//   try {
+//     // LOG 2: Cookie Inspection
+//     // This identifies if the browser is even sending the session cookie
+//     const allCookies = req.cookies.getAll().map((c) => c.name);
+//     console.log(`[Proxy-Diagnostic] Cookie Names:`, allCookies);
+
+//     // Attempt to get token with explicit security settings
+//     const token = await getToken({
+//       req,
+//       secret: process.env.AUTH_SECRET,
+//       // Force it to check both secure and non-secure cookie name variants
+//       secureCookie: isProd || req.url.startsWith("https://"),
+//     });
+
+//     // LOG 3: Result of getToken
+//     if (!token) {
+//       console.log(`[Proxy-Diagnostic] !! TOKEN NULL !! for: ${pathname}`);
+//     } else {
+//       const tokenPreview = (token.accessToken as string)?.substring(0, 10);
+//       console.log(
+//         `[Proxy-Diagnostic] Token Success: ${tokenPreview}... | User: ${token.email}`,
+//       );
+//     }
+
+//     // Prepare headers
+//     const requestHeaders = new Headers(req.headers);
+//     if (token?.accessToken) {
+//       requestHeaders.set("Authorization", `Bearer ${token.accessToken}`);
+//     }
+//     requestHeaders.set("x-proxy-diagnostic", "active");
+
+//     // ALWAYS allow the request to proceed (No blocking)
+//     return NextResponse.next({
+//       request: {
+//         headers: requestHeaders,
+//       },
+//     });
+//   } catch (error) {
+//     // Catch-all for decryption errors (e.g. wrong secret)
+//     console.error(`[Proxy-Diagnostic] CRITICAL ERROR at ${pathname}:`, error);
+//     return NextResponse.next();
+//   }
+// }
+
+// export const config = {
+//   matcher: [
+//     "/dashboard/:path*",
+//     "/api/bingwa/:path*",
+//     "/((?!api|_next/static|_next/image|favicon.ico).*)",
+//   ],
+// };
+
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const isProd = process.env.NODE_ENV === "production";
-  const accessToken = req.cookies.get("accessToken")?.value;
 
-  // LOG 1: Heartbeat
-  console.log(`[Proxy-Diagnostic] Path: ${pathname}`);
-  console.log(`[Proxy-Diagnostic] Access Token: ${accessToken}`);
+  console.log(`[Proxy] Processing: ${pathname}`);
 
   try {
-    // LOG 2: Cookie Inspection
-    // This identifies if the browser is even sending the session cookie
-    const allCookies = req.cookies.getAll().map((c) => c.name);
-    console.log(`[Proxy-Diagnostic] Cookie Names:`, allCookies);
-
-    // Attempt to get token with explicit security settings
     const token = await getToken({
       req,
       secret: process.env.AUTH_SECRET,
-      // Force it to check both secure and non-secure cookie name variants
       secureCookie: isProd || req.url.startsWith("https://"),
     });
 
-    // LOG 3: Result of getToken
-    if (!token) {
-      console.log(`[Proxy-Diagnostic] !! TOKEN NULL !! for: ${pathname}`);
-    } else {
-      const tokenPreview = (token.accessToken as string)?.substring(0, 10);
-      console.log(
-        `[Proxy-Diagnostic] Token Success: ${tokenPreview}... | User: ${token.email}`,
-      );
-    }
-
-    // Prepare headers
+    const accessToken = token?.accessToken as string;
     const requestHeaders = new Headers(req.headers);
-    if (token?.accessToken) {
-      requestHeaders.set("Authorization", `Bearer ${token.accessToken}`);
-    }
-    requestHeaders.set("x-proxy-diagnostic", "active");
 
-    // ALWAYS allow the request to proceed (No blocking)
+    // If we have a token, attempt to validate it with the backend
+    if (accessToken) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        const res = await fetch(`${process.env.API_BASE_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          cache: "no-store",
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const userData = await res.json();
+          if (userData?.email) {
+            console.log(`[Proxy] Token validated for: ${userData.email}`);
+            // Inject validated token into headers
+            requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+            requestHeaders.set("x-proxy-validated", "true");
+          }
+        } else {
+          console.warn(
+            `[Proxy] Backend rejected token for ${pathname} (Status: ${res.status})`,
+          );
+        }
+      } catch (fetchError) {
+        console.error(
+          `[Proxy] Backend validation failed (Timeout or Network)`,
+          fetchError,
+        );
+      }
+    } else {
+      console.log(`[Proxy] No token found in session for ${pathname}`);
+    }
+
+    // ALWAYS allow the request to proceed, even if validation failed
     return NextResponse.next({
       request: {
         headers: requestHeaders,
       },
     });
   } catch (error) {
-    // Catch-all for decryption errors (e.g. wrong secret)
-    console.error(`[Proxy-Diagnostic] CRITICAL ERROR at ${pathname}:`, error);
+    console.error(`[Proxy] Critical Error at ${pathname}:`, error);
+    // Safety fallback: proceed without injected headers
     return NextResponse.next();
   }
 }
