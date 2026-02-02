@@ -24,7 +24,7 @@ export const { signIn, signOut, handlers, auth } = NextAuth({
           console.error(
             "Failed to authenticate with backend:",
             res.status,
-            errorBody
+            errorBody,
           );
           throw new Error("Failed to authenticate with backend.");
         }
@@ -37,6 +37,8 @@ export const { signIn, signOut, handlers, auth } = NextAuth({
         token.picture = user.image;
       }
 
+      console.log("[JWT] Token:", token);
+
       return token;
     },
 
@@ -48,6 +50,7 @@ export const { signIn, signOut, handlers, auth } = NextAuth({
         session.user.image = token.picture as string;
       }
 
+      console.log("[Session] Session:", session);
       return session;
     },
   },

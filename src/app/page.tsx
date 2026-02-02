@@ -7,7 +7,8 @@ import { SignInButton } from "@/components/googleSignInButton";
 import { useAuthenticatedUser } from "@/lib/hooks/useUser";
 
 export default function HomePage() {
-  const { user, isAuthenticated, isLoading } = useAuthenticatedUser(null);
+  const { user, isAuthenticated, isLoading, session } =
+    useAuthenticatedUser(null);
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -44,12 +45,13 @@ export default function HomePage() {
                 Sign out
               </button>
             </div>
+            <p>
+              <pre>{JSON.stringify(session, null, 2)}</pre>
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-2xl font-black text-primary-foreground">
-              M
-            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-2xl font-black text-primary-foreground"></div>
             <div>
               <h1 className="text-2xl font-bold">Mazeltov</h1>
               <p className="mt-2 text-sm text-muted-foreground">

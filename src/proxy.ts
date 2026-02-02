@@ -29,6 +29,8 @@ export default async function proxy(req: NextRequest) {
     });
 
     clearTimeout(timeoutId);
+    console.log("[Proxy] Auth response status:", res.status);
+
 
     if (!res.ok) {
       console.warn("[Proxy] Backend rejected token");
@@ -36,8 +38,10 @@ export default async function proxy(req: NextRequest) {
     }
 
     const userData = await res.json();
+    console.log("[Proxy] User data fetched:", userData);
 
     if (!userData?.email) {
+      console.error("[Proxy] Invalid user data received");
       return redirectToAuth(req, true);
     }
 
